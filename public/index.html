@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>B's Space Math Adventure</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Exo+2:wght@400;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Exo 2', sans-serif;
+      background: #050a1a;
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* STARS */
+    #stars {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .star {
+      position: absolute;
+      background: #fff;
+      border-radius: 50%;
+      animation: twinkle var(--dur) infinite alternate;
+    }
+    @keyframes twinkle { from { opacity: 0.2; } to { opacity: 1; } }
+
+    /* PLANETS */
+    .planet {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      animation: float 8s ease-in-out infinite alternate;
+    }
+    @keyframes float { from { transform: translateY(0); } to { transform: translateY(-20px); } }
+    .planet-1 { width: 120px; height: 120px; background: radial-gradient(circle at 35% 35%, #ff6b6b, #8b0000); top: 5%; right: 8%; animation-delay: 0s; }
+    .planet-2 { width: 80px; height: 80px; background: radial-gradient(circle at 35% 35%, #ffd93d, #b8860b); bottom: 15%; left: 5%; animation-delay: 2s; }
+    .planet-3 { width: 55px; height: 55px; background: radial-gradient(circle at 35% 35%, #6bcbff, #003366); top: 40%; right: 3%; animation-delay: 4s; }
+
+    /* ROCKET */
+    .rocket {
+      position: fixed;
+      font-size: 2.5rem;
+      bottom: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: rocket-float 3s ease-in-out infinite alternate;
+      z-index: 1;
+      filter: drop-shadow(0 0 12px rgba(255,150,0,0.7));
+    }
+    @keyframes rocket-float {
+      from { transform: translateX(-50%) translateY(0) rotate(-5deg); }
+      to   { transform: translateX(-50%) translateY(-15px) rotate(5deg); }
+    }
+
+    /* LAYOUT */
+    .screen {
+      position: relative;
+      z-index: 2;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+    }
+    .screen.active { display: flex; }
+
+    /* WELCOME */
+    #welcome-screen h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      background: linear-gradient(135deg, #ffd93d, #ff6b6b, #6bcbff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+      text-shadow: none;
+      filter: drop-shadow(0 0 20px rgba(255,200,0,0.4));
+    }
+    #welcome-screen p {
+      font-size: 1.2rem;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 40px;
+      max-width: 500px;
+    }
+
+    .btn-start {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      padding: 18px 48px;
+      background: linear-gradient(135deg, #ffd93d, #ff6b6b);
+      color: #000;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 900;
+      letter-spacing: 1px;
+      box-shadow: 0 0 30px rgba(255,200,0,0.5);
+      transition: transform 0.2s, box-shadow 0.2s;
+      animation: pulse-btn 2s ease-in-out infinite;
+    }
+    @keyframes pulse-btn {
+      0%,100% { box-shadow: 0 0 30px rgba(255,200,0,0.5); }
+      50%      { box-shadow: 0 0 50px rgba(255,100,0,0.8); }
+    }
+    .btn-start:hover { transform: scale(1.07); }
+
+    /* HUD */
+    #hud {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 10;
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    #hud.visible { display: flex; }
+    .hud-item { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; }
+    .hud-label { color: rgba(255,255,255,0.4); font-size: 0.7rem; display: block; }
+    .hud-val { color: #ffd93d; font-size: 1.1rem; }
+
+    /* LEVEL BADGE */
+    .level-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 30px;
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+      color: #6bcbff;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    /* QUESTION CARD */
+    #game-screen { padding-top: 100px; }
+
+    .question-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(12px);
+      border-radius: 24px;
+      padding: 36px 40px;
+      max-width: 620px;
+      width: 100%;
+      margin-bottom: 24px;
+    }
+    .question-type {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #6bcbff;
+      margin-bottom: 12px;
+    }
+    .question-text {
+      font-size: clamp(1.2rem, 3vw, 1.6rem);
+      font-weight: 700;
+      line-height: 1.5;
+      margin-bottom: 28px;
+      color: #fff;
+    }
+    .question-visual {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      letter-spacing: 6px;
+      color: #ffd93d;
+    }
+
+    /* ANSWER OPTIONS */
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      max-width: 620px;
+      width: 100%;
+    }
+    .opt-btn {
+      padding: 16px;
+      background: rgba(255,255,255,0.07);
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Exo 2', sans-serif;
+    }
+    .opt-btn:hover:not(:disabled) {
+      background: rgba(107,203,255,0.15);
+      border-color: #6bcbff;
+      transform: translateY(-2px);
+    }
+    .opt-btn.correct {
+      background: rgba(0,255,100,0.2);
+      border-color: #00ff64;
+      color: #00ff64;
+    }
+    .opt-btn.wrong {
+      background: rgba(255,80,80,0.2);
+      border-color: #ff5050;
+      color: #ff5050;
+    }
+
+    /* FEEDBACK */
+    .feedback {
+      max-width: 620px;
+      width: 100%;
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-top: 16px;
+      display: none;
+      text-align: left;
+      animation: fadein 0.3s ease;
+    }
+    @keyframes fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .feedback.correct-fb {
+      background: rgba(0,255,100,0.1);
+      border: 1px solid rgba(0,255,100,0.3);
+    }
+    .feedback.wrong-fb {
+      background: rgba(255,80,80,0.1);
+      border: 1px solid rgba(255,80,80,0.3);
+    }
+    .feedback-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 6px; }
+    .feedback.correct-fb .feedback-title { color: #00ff64; }
+    .feedback.wrong-fb .feedback-title { color: #ff5050; }
+    .feedback-body { color: rgba(255,255,255,0.75); font-size: 0.95rem; line-height: 1.5; }
+
+    .btn-next {
+      margin-top: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      padding: 14px 40px;
+      background: linear-gradient(135deg, #6bcbff, #3a7bd5);
+      color: #000;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 700;
+      display: none;
+      transition: transform 0.2s;
+    }
+    .btn-next:hover { transform: scale(1.05); }
+
+    /* LEVEL UP */
+    #levelup-screen h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      color: #ffd93d;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 0 20px rgba(255,200,0,0.6));
+    }
+    #levelup-screen p { color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 30px; }
+    .stars-earned { font-size: 2.5rem; margin-bottom: 20px; animation: spin-stars 0.6s ease; }
+    @keyframes spin-stars { from { transform: scale(0) rotate(-180deg); } to { transform: scale(1) rotate(0); } }
+
+    /* RESULTS */
+    #results-screen h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      background: linear-gradient(135deg, #ffd93d, #ff6b6b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+    }
+    .final-score {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 4rem;
+      color: #ffd93d;
+      margin: 20px 0;
+      filter: drop-shadow(0 0 20px rgba(255,200,0,0.5));
+    }
+    .final-stats {
+      display: flex;
+      gap: 24px;
+      margin: 20px 0 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .stat-box {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 16px 24px;
+      min-width: 120px;
+    }
+    .stat-box .val { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; color: #6bcbff; }
+    .stat-box .lbl { font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+    .btn-play-again {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      padding: 14px 40px;
+      background: linear-gradient(135deg, #ffd93d, #ff6b6b);
+      color: #000;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 0.2s;
+    }
+    .btn-play-again:hover { transform: scale(1.05); }
+
+    /* CONFETTI */
+    .confetti-piece {
+      position: fixed;
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      animation: confetti-fall linear forwards;
+      z-index: 999;
+      pointer-events: none;
+    }
+    @keyframes confetti-fall {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- BACKGROUND -->
+<div id="stars"></div>
+<div class="planet planet-1"></div>
+<div class="planet planet-2"></div>
+<div class="planet planet-3"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-item">
+    <span class="hud-label">EXPLORER</span>
+    <span class="hud-val">B</span>
+  </div>
+  <div class="hud-item">
+    <span class="hud-label">SCORE</span>
+    <span class="hud-val" id="hud-score">0</span>
+  </div>
+  <div class="hud-item">
+    <span class="hud-label">LEVEL</span>
+    <span class="hud-val" id="hud-level">1</span>
+  </div>
+  <div class="hud-item">
+    <span class="hud-label">STREAK</span>
+    <span class="hud-val" id="hud-streak">0 🔥</span>
+  </div>
+</div>
+
+<!-- WELCOME -->
+<div id="welcome-screen" class="screen active">
+  <div style="font-size:5rem;margin-bottom:20px;filter:drop-shadow(0 0 20px rgba(255,150,0,0.8));">🚀</div>
+  <h1>B's Space Math<br>Adventure</h1>
+  <p>Blast through the galaxy solving math puzzles! Each correct answer powers your rocket further into space. 🌟</p>
+  <button class="btn-start" onclick="startGame()">🚀 Begin Adventure!</button>
+</div>
+
+<!-- GAME -->
+<div id="game-screen" class="screen">
+  <div class="level-badge" id="level-badge">⭐ Level 1 — Planet Arithmos</div>
+  <div class="question-card">
+    <div class="question-type" id="q-type"></div>
+    <div class="question-text" id="q-text"></div>
+    <div class="question-visual" id="q-visual"></div>
+  </div>
+  <div class="options" id="options"></div>
+  <div class="feedback" id="feedback">
+    <div class="feedback-title" id="fb-title"></div>
+    <div class="feedback-body" id="fb-body"></div>
+  </div>
+  <button class="btn-next" id="btn-next" onclick="nextQuestion()">Next Question →</button>
+</div>
+
+<!-- LEVEL UP -->
+<div id="levelup-screen" class="screen">
+  <div class="stars-earned" id="stars-earned">⭐⭐⭐</div>
+  <h2 id="levelup-title">Level Up!</h2>
+  <p id="levelup-msg">You're blasting deeper into space!</p>
+  <button class="btn-start" onclick="continueAfterLevelUp()">🚀 Keep Going!</button>
+</div>
+
+<!-- RESULTS -->
+<div id="results-screen" class="screen">
+  <div style="font-size:4rem;margin-bottom:10px;">🏆</div>
+  <h2>Mission Complete!</h2>
+  <div class="final-score" id="final-score">0</div>
+  <div class="final-stats">
+    <div class="stat-box"><div class="val" id="res-correct">0</div><div class="lbl">Correct</div></div>
+    <div class="stat-box"><div class="val" id="res-total">0</div><div class="lbl">Total</div></div>
+    <div class="stat-box"><div class="val" id="res-level">1</div><div class="lbl">Level Reached</div></div>
+  </div>
+  <p style="color:rgba(255,255,255,0.6);margin-bottom:24px;" id="res-msg"></p>
+  <button class="btn-play-again" onclick="restartGame()">🚀 Play Again!</button>
+</div>
+
+<script>
+// ── STARS BACKGROUND ──
+(function() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 150; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 3 + 1;
+    s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--dur:${(Math.random()*3+2).toFixed(1)}s;opacity:${Math.random()};`;
+    c.appendChild(s);
+  }
+})();
+
+// ── GAME STATE ──
+let state = {
+  level: 1, score: 0, streak: 0,
+  correctInRow: 0, totalAnswered: 0, totalCorrect: 0,
+  questionsThisLevel: 0, answered: false
+};
+
+const QUESTIONS_TO_LEVEL_UP = 4; // correct answers needed to advance
+const MAX_LEVEL = 8;
+const TOTAL_QUESTIONS = 20;
+
+const LEVEL_NAMES = [
+  '', 'Planet Arithmos', 'Asteroid Belt', 'Moon Base Alpha',
+  'Mars Station', 'Jupiter Rings', 'Saturn Nebula', 'Black Hole Edge', 'The Galaxy Core'
+];
+
+// ── QUESTION BANK ──
+function getQuestion(level) {
+  const types = getTypesForLevel(level);
+  const type = types[Math.floor(Math.random() * types.length)];
+  return generateQuestion(type, level);
+}
+
+function getTypesForLevel(level) {
+  if (level <= 2) return ['add', 'subtract', 'multiply', 'pattern'];
+  if (level <= 4) return ['add', 'subtract', 'multiply', 'divide', 'pattern', 'geometry'];
+  if (level <= 6) return ['multiply', 'divide', 'pattern', 'geometry', 'fractions', 'word'];
+  return ['multiply', 'divide', 'pattern', 'geometry', 'fractions', 'word', 'advanced'];
+}
+
+function r(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function shuffle(a) { return a.sort(() => Math.random() - 0.5); }
+
+function generateQuestion(type, level) {
+  let q = { type, visual: '' };
+
+  if (type === 'add') {
+    const max = level <= 2 ? 50 : level <= 4 ? 200 : 999;
+    const a = r(level <= 2 ? 10 : 50, max), b = r(level <= 2 ? 10 : 50, max);
+    q.text = `What is ${a} + ${b}?`;
+    q.answer = a + b;
+    q.typeLabel = '➕ Addition';
+    q.explanation = `${a} + ${b} = ${a+b}. Try counting up from ${a} by ${b}!`;
+    q.wrongs = [a+b+r(1,9), a+b-r(1,9), a+b+r(10,20)];
+
+  } else if (type === 'subtract') {
+    const max = level <= 2 ? 80 : 300;
+    let a = r(30, max), b = r(10, a - 5);
+    q.text = `What is ${a} − ${b}?`;
+    q.answer = a - b;
+    q.typeLabel = '➖ Subtraction';
+    q.explanation = `${a} − ${b} = ${a-b}. You can check by adding: ${a-b} + ${b} = ${a}!`;
+    q.wrongs = [a-b+r(1,9), a-b-r(1,9), a-b+r(10,20)];
+
+  } else if (type === 'multiply') {
+    const maxA = level <= 3 ? 9 : level <= 5 ? 12 : 15;
+    const maxB = level <= 3 ? 9 : level <= 5 ? 12 : 15;
+    const a = r(2, maxA), b = r(2, maxB);
+    q.text = `What is ${a} × ${b}?`;
+    q.answer = a * b;
+    q.typeLabel = '✖️ Multiplication';
+    q.explanation = `${a} × ${b} = ${a*b}. Think of it as ${b} groups of ${a}, or ${a} added together ${b} times!`;
+    q.wrongs = [a*b+r(1,5), a*b-r(1,5), (a+1)*b];
+
+  } else if (type === 'divide') {
+    const a = r(2, level <= 4 ? 9 : 12), b = r(2, level <= 4 ? 9 : 12);
+    const product = a * b;
+    q.text = `What is ${product} ÷ ${a}?`;
+    q.answer = b;
+    q.typeLabel = '➗ Division';
+    q.explanation = `${product} ÷ ${a} = ${b}. Division is the opposite of multiplication: ${a} × ${b} = ${product}!`;
+    q.wrongs = [b+1, b+2, b-1 > 0 ? b-1 : b+3];
+
+  } else if (type === 'pattern') {
+    return generatePattern(level);
+
+  } else if (type === 'geometry') {
+    return generateGeometry(level);
+
+  } else if (type === 'fractions') {
+    return generateFraction(level);
+
+  } else if (type === 'word') {
+    return generateWord(level);
+
+  } else if (type === 'advanced') {
+    return generateAdvanced(level);
+  }
+
+  // dedupe wrongs and make options
+  q.wrongs = [...new Set(q.wrongs.filter(w => w !== q.answer && w > 0))].slice(0, 3);
+  while (q.wrongs.length < 3) q.wrongs.push(q.answer + r(11, 25));
+  q.options = shuffle([q.answer, ...q.wrongs.slice(0, 3)]);
+  return q;
+}
+
+function generatePattern(level) {
+  const patterns = [
+    // arithmetic sequences
+    () => { const start = r(1,10), step = r(2,6); const seq = [start, start+step, start+2*step, start+3*step]; return { seq, answer: start+4*step, explanation: `The pattern adds ${step} each time! ${seq.join(', ')}, ${start+4*step}.` }; },
+    () => { const start = r(2,5), mult = r(2,3); const seq = [start, start*mult, start*mult*mult, start*mult*mult*mult]; return { seq, answer: start*mult*mult*mult*mult, explanation: `The pattern multiplies by ${mult} each time! ${seq.join(', ')}, ${start*mult*mult*mult*mult}.` }; },
+    () => { const start = r(20,50), step = r(2,7); const seq = [start, start-step, start-2*step, start-3*step]; return { seq, answer: start-4*step > 0 ? start-4*step : start-4*step+50, explanation: `The pattern subtracts ${step} each time!` }; },
+  ];
+  const p = patterns[r(0, level <= 3 ? 0 : patterns.length - 1)]();
+  const q = {
+    type: 'pattern', typeLabel: '🔢 Pattern Recognition',
+    text: `What comes next in the pattern?`,
+    visual: p.seq.join('  →  ') + '  →  ?',
+    answer: p.answer,
+    explanation: p.explanation,
+  };
+  const wrongs = [p.answer + r(1,5), p.answer - r(1,5), p.answer + r(6,12)].filter(w => w !== p.answer && w > 0);
+  q.options = shuffle([p.answer, ...wrongs.slice(0,3)]);
+  return q;
+}
+
+function generateGeometry(level) {
+  const shapes = [
+    {
+      name: 'rectangle', text: (a,b) => `A rectangle has a length of ${a} and a width of ${b}. What is its PERIMETER?`,
+      fn: (a,b) => 2*(a+b), explanation: (a,b) => `Perimeter = 2 × (length + width) = 2 × (${a} + ${b}) = 2 × ${a+b} = ${2*(a+b)}.`
+    },
+    {
+      name: 'rectangle', text: (a,b) => `A rectangle is ${a} cm long and ${b} cm wide. What is its AREA?`,
+      fn: (a,b) => a*b, explanation: (a,b) => `Area = length × width = ${a} × ${b} = ${a*b} square cm.`
+    },
+    {
+      name: 'triangle', text: (a,b,c) => `A triangle has sides of ${a}, ${b}, and ${c}. What is its perimeter?`,
+      fn: (a,b,c) => a+b+c, explanation: (a,b,c) => `Perimeter of a triangle = add all 3 sides: ${a} + ${b} + ${c} = ${a+b+c}.`,
+      threeArgs: true
+    },
+    {
+      name: 'square', text: (a) => `A square has a side length of ${a}. What is its area?`,
+      fn: (a) => a*a, explanation: (a) => `Area of a square = side × side = ${a} × ${a} = ${a*a}.`,
+      oneArg: true
+    },
+  ];
+  const shape = shapes[r(0, shapes.length - 1)];
+  let a = r(3, 12), b = r(3, 12), c = r(3, 12);
+  const ans = shape.threeArgs ? shape.fn(a,b,c) : shape.oneArg ? shape.fn(a) : shape.fn(a,b);
+  const exp = shape.threeArgs ? shape.explanation(a,b,c) : shape.oneArg ? shape.explanation(a) : shape.explanation(a,b);
+  const text = shape.threeArgs ? shape.text(a,b,c) : shape.oneArg ? shape.text(a) : shape.text(a,b);
+  const wrongs = [ans+r(1,6), ans-r(1,6), ans+r(7,15)].filter(w => w !== ans && w > 0);
+  return {
+    type: 'geometry', typeLabel: '📐 Geometry',
+    text, answer: ans, explanation: exp, visual: '',
+    options: shuffle([ans, ...wrongs.slice(0,3)])
+  };
+}
+
+function generateFraction(level) {
+  const denoms = [2,3,4,5,8,10];
+  const d = denoms[r(0, denoms.length-1)];
+  const n1 = r(1, d-1), n2 = r(1, d-1);
+  const sum = n1 + n2;
+  if (sum <= d) {
+    const ans = sum;
+    return {
+      type:'fractions', typeLabel:'🍕 Fractions',
+      text: `What is ${n1}/${d} + ${n2}/${d}? (Give the numerator — the top number)`,
+      visual: '', answer: ans,
+      explanation: `When fractions have the same bottom number (denominator), just add the top numbers (numerators)! ${n1}/${d} + ${n2}/${d} = ${sum}/${d}.`,
+      options: shuffle([ans, ans+1, ans+2, ans > 1 ? ans-1 : ans+3])
+    };
+  }
+  return generateGeometry(level);
+}
+
+function generateWord(level) {
+  const problems = [
+    () => { const a=r(3,8),b=r(2,6),c=r(1,4); const ans=(a+b)*c; return { text:`B has ${a} red space rocks and ${b} blue space rocks. If B finds ${c} times as many of each color, how many rocks total?`, ans, exp:`First, total rocks = ${a} + ${b} = ${a+b}. Then multiply by ${c}: ${a+b} × ${c} = ${ans}.` }; },
+    () => { const seats=r(4,8),rows=r(3,6),empty=r(2,8); const ans=seats*rows-empty; return { text:`A spaceship has ${rows} rows with ${seats} seats each. If ${empty} seats are empty, how many astronauts are on board?`, ans, exp:`Total seats = ${rows} × ${seats} = ${rows*seats}. Astronauts = ${rows*seats} − ${empty} = ${ans}.` }; },
+    () => { const total=r(20,50),groups=r(2,5); const each=Math.floor(total/groups); return { text:`${total} space crystals need to be shared equally among ${groups} planets. How many does each planet get?`, ans:each, exp:`${total} ÷ ${groups} = ${each}. Division means sharing equally!` }; },
+  ];
+  const p = problems[r(0, problems.length-1)]();
+  const wrongs = [p.ans+r(1,5), p.ans-r(1,4), p.ans+r(6,12)].filter(w=>w!==p.ans&&w>0);
+  return {
+    type:'word', typeLabel:'🌌 Word Problem',
+    text:p.text, visual:'', answer:p.ans, explanation:p.exp,
+    options:shuffle([p.ans,...wrongs.slice(0,3)])
+  };
+}
+
+function generateAdvanced(level) {
+  // Simple algebra / order of operations
+  const a=r(2,9),b=r(2,9),c=r(1,5);
+  const ans = a*b + c;
+  return {
+    type:'advanced', typeLabel:'🧠 Brain Buster',
+    text:`What is (${a} × ${b}) + ${c}?`,
+    visual:'', answer:ans,
+    explanation:`Order of operations: do multiplication first! ${a} × ${b} = ${a*b}, then add ${c}: ${a*b} + ${c} = ${ans}.`,
+    options:shuffle([ans, ans+r(1,5), ans-r(1,4), ans+r(6,10)].filter((v,i,a)=>a.indexOf(v)===i).slice(0,4))
+  };
+}
+
+// ── GAME LOGIC ──
+let currentQ = null;
+
+function startGame() {
+  state = { level:1, score:0, streak:0, correctInRow:0, totalAnswered:0, totalCorrect:0, questionsThisLevel:0, answered:false };
+  showScreen('game-screen');
+  document.getElementById('hud').classList.add('visible');
+  updateHUD();
+  loadQuestion();
+}
+
+function loadQuestion() {
+  if (state.totalAnswered >= TOTAL_QUESTIONS) { showResults(); return; }
+  state.answered = false;
+  currentQ = getQuestion(state.level);
+  updateLevelBadge();
+  document.getElementById('q-type').textContent = currentQ.typeLabel || '';
+  document.getElementById('q-text').textContent = currentQ.text;
+  document.getElementById('q-visual').textContent = currentQ.visual || '';
+  document.getElementById('feedback').style.display = 'none';
+  document.getElementById('btn-next').style.display = 'none';
+
+  const optEl = document.getElementById('options');
+  optEl.innerHTML = '';
+  currentQ.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.textContent = opt;
+    btn.onclick = () => checkAnswer(opt, btn);
+    optEl.appendChild(btn);
+  });
+}
+
+function checkAnswer(selected, btn) {
+  if (state.answered) return;
+  state.answered = true;
+  state.totalAnswered++;
+  const correct = selected === currentQ.answer;
+
+  document.querySelectorAll('.opt-btn').forEach(b => {
+    b.disabled = true;
+    if (parseInt(b.textContent) === currentQ.answer || b.textContent == currentQ.answer) b.classList.add('correct');
+  });
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback ' + (correct ? 'correct-fb' : 'wrong-fb');
+  fb.style.display = 'block';
+
+  if (correct) {
+    btn.classList.add('correct');
+    state.score += 10 + (state.streak >= 2 ? 5 : 0);
+    state.streak++;
+    state.correctInRow++;
+    state.totalCorrect++;
+    state.questionsThisLevel++;
+    document.getElementById('fb-title').textContent = getCorrectMsg();
+    document.getElementById('fb-body').textContent = currentQ.explanation;
+  } else {
+    btn.classList.add('wrong');
+    state.streak = 0;
+    state.correctInRow = 0;
+    document.getElementById('fb-title').textContent = '🚀 Not quite — let\'s learn from this!';
+    document.getElementById('fb-body').textContent = currentQ.explanation;
+  }
+
+  updateHUD();
+
+  // Level up?
+  if (state.questionsThisLevel >= QUESTIONS_TO_LEVEL_UP && state.level < MAX_LEVEL) {
+    document.getElementById('btn-next').style.display = 'none';
+    setTimeout(() => showLevelUp(), 1200);
+  } else {
+    document.getElementById('btn-next').style.display = 'inline-block';
+  }
+}
+
+function getCorrectMsg() {
+  const msgs = ['🌟 Amazing, B!', '🚀 Out of this world!', '⭐ Stellar work!', '💫 Superstar!', '🛸 Genius explorer!', '🌙 Moonshot answer!'];
+  return msgs[Math.floor(Math.random() * msgs.length)];
+}
+
+function nextQuestion() { loadQuestion(); }
+
+function showLevelUp() {
+  state.level = Math.min(state.level + 1, MAX_LEVEL);
+  state.questionsThisLevel = 0;
+  showScreen('levelup-screen');
+  document.getElementById('levelup-title').textContent = `Level ${state.level} Unlocked! 🚀`;
+  document.getElementById('levelup-msg').textContent = `You've reached ${LEVEL_NAMES[state.level]}! The problems get harder — but so do you!`;
+  document.getElementById('stars-earned').textContent = '⭐'.repeat(Math.min(state.level, 5));
+  updateHUD();
+  confetti();
+}
+
+function continueAfterLevelUp() {
+  showScreen('game-screen');
+  loadQuestion();
+}
+
+function showResults() {
+  showScreen('results-screen');
+  document.getElementById('hud').classList.remove('visible');
+  const pct = Math.round((state.totalCorrect / state.totalAnswered) * 100);
+  document.getElementById('final-score').textContent = state.score;
+  document.getElementById('res-correct').textContent = state.totalCorrect;
+  document.getElementById('res-total').textContent = state.totalAnswered;
+  document.getElementById('res-level').textContent = state.level;
+  const msgs = pct >= 90 ? '🌟 Incredible! You\'re a true Space Math Master!' : pct >= 70 ? '🚀 Great job, B! Keep exploring the galaxy!' : '🛸 Good effort! Every explorer gets better with practice!';
+  document.getElementById('res-msg').textContent = msgs;
+  if (pct >= 70) confetti();
+}
+
+function restartGame() { startGame(); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function updateHUD() {
+  document.getElementById('hud-score').textContent = state.score;
+  document.getElementById('hud-level').textContent = state.level;
+  document.getElementById('hud-streak').textContent = state.streak + (state.streak >= 3 ? ' 🔥' : '');
+}
+
+function updateLevelBadge() {
+  document.getElementById('level-badge').textContent = `⭐ Level ${state.level} — ${LEVEL_NAMES[state.level] || 'Deep Space'}`;
+}
+
+function confetti() {
+  const colors = ['#ffd93d','#ff6b6b','#6bcbff','#00ff64','#ff9ff3','#fff'];
+  for (let i = 0; i < 60; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.cssText = `left:${Math.random()*100}vw;background:${colors[Math.floor(Math.random()*colors.length)]};width:${r(6,14)}px;height:${r(6,14)}px;animation-duration:${(Math.random()*2+1.5).toFixed(1)}s;animation-delay:0s;border-radius:${Math.random()>0.5?'50%':'2px'};`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }, i * 40);
+  }
+}
+</script>
+</body>
+</html>

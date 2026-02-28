@@ -407,6 +407,69 @@
 </div>
 
 <script>
+// ── SOUND EFFECTS ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  return audioCtx;
+}
+
+function playCorrect() {
+  const ctx = getAudioCtx();
+  // Ascending happy chime — three notes
+  const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
+    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
+    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * 0.12 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.35);
+    osc.start(ctx.currentTime + i * 0.12);
+    osc.stop(ctx.currentTime + i * 0.12 + 0.4);
+  });
+}
+
+function playLevelUp() {
+  const ctx = getAudioCtx();
+  // Fanfare — ascending run
+  const notes = [392, 523.25, 659.25, 783.99, 1046.5];
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
+    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.1);
+    gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + i * 0.1 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.3);
+    osc.start(ctx.currentTime + i * 0.1);
+    osc.stop(ctx.currentTime + i * 0.1 + 0.35);
+  });
+}
+
+function playWrong() {
+  const ctx = getAudioCtx();
+  // Descending dull thud
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(220, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.3);
+  gain.gain.setValueAtTime(0.2, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.4);
+}
+
 // ── STARS BACKGROUND ──
 (function() {
   const c = document.getElementById('stars');
@@ -672,12 +735,14 @@ function checkAnswer(selected, btn) {
     state.questionsThisLevel++;
     document.getElementById('fb-title').textContent = getCorrectMsg();
     document.getElementById('fb-body').textContent = currentQ.explanation;
+    playCorrect();
   } else {
     btn.classList.add('wrong');
     state.streak = 0;
     state.correctInRow = 0;
     document.getElementById('fb-title').textContent = '🚀 Not quite — let\'s learn from this!';
     document.getElementById('fb-body').textContent = currentQ.explanation;
+    playWrong();
   }
 
   updateHUD();
@@ -707,6 +772,7 @@ function showLevelUp() {
   document.getElementById('stars-earned').textContent = '⭐'.repeat(Math.min(state.level, 5));
   updateHUD();
   confetti();
+  playLevelUp();
 }
 
 function continueAfterLevelUp() {

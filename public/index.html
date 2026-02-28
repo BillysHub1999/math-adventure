@@ -413,6 +413,7 @@ let audioCtx = null;
 
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
 
@@ -682,6 +683,8 @@ function generateAdvanced(level) {
 let currentQ = null;
 
 function startGame() {
+  // Unlock audio context on first user gesture
+  getAudioCtx();
   state = { level:1, score:0, streak:0, correctInRow:0, totalAnswered:0, totalCorrect:0, questionsThisLevel:0, answered:false };
   showScreen('game-screen');
   document.getElementById('hud').classList.add('visible');

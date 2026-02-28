@@ -366,6 +366,7 @@
   <h1>B's Space Math<br>Adventure</h1>
   <p>Blast through the galaxy solving math puzzles! Each correct answer powers your rocket further into space. 🌟</p>
   <button class="btn-start" onclick="startGame()">🚀 Begin Adventure!</button>
+  <button onclick="playCorrect()" style="margin-top:16px;background:none;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.5);padding:8px 20px;border-radius:20px;cursor:pointer;font-size:0.85rem;">🔊 Test Sound</button>
 </div>
 
 <!-- GAME -->
@@ -408,67 +409,49 @@
 
 <script>
 // ── SOUND EFFECTS ──
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 
 function getAudioCtx() {
-  if (!audioCtx) audioCtx = new AudioCtx();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
   return audioCtx;
 }
 
-function playCorrect() {
+function playTone(freq, type, startTime, duration, volume) {
   const ctx = getAudioCtx();
-  // Ascending happy chime — three notes
-  const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
-  notes.forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
-    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * 0.12 + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.35);
-    osc.start(ctx.currentTime + i * 0.12);
-    osc.stop(ctx.currentTime + i * 0.12 + 0.4);
-  });
-}
-
-function playLevelUp() {
-  const ctx = getAudioCtx();
-  // Fanfare — ascending run
-  const notes = [392, 523.25, 659.25, 783.99, 1046.5];
-  notes.forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
-    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.1);
-    gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + i * 0.1 + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.3);
-    osc.start(ctx.currentTime + i * 0.1);
-    osc.stop(ctx.currentTime + i * 0.1 + 0.35);
-  });
-}
-
-function playWrong() {
-  const ctx = getAudioCtx();
-  // Descending dull thud
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain);
   gain.connect(ctx.destination);
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(220, ctx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.3);
-  gain.gain.setValueAtTime(0.2, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.4);
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(volume, ctx.currentTime + startTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startTime + duration);
+  osc.start(ctx.currentTime + startTime);
+  osc.stop(ctx.currentTime + startTime + duration + 0.05);
+}
+
+function playCorrect() {
+  playTone(523, 'sine', 0.0,  0.25, 0.4);
+  playTone(659, 'sine', 0.15, 0.25, 0.4);
+  playTone(784, 'sine', 0.30, 0.35, 0.4);
+}
+
+function playWrong() {
+  playTone(300, 'sawtooth', 0.0,  0.15, 0.3);
+  playTone(200, 'sawtooth', 0.15, 0.25, 0.3);
+}
+
+function playLevelUp() {
+  playTone(392,  'square', 0.0,  0.15, 0.2);
+  playTone(523,  'square', 0.12, 0.15, 0.2);
+  playTone(659,  'square', 0.24, 0.15, 0.2);
+  playTone(784,  'square', 0.36, 0.15, 0.2);
+  playTone(1047, 'square', 0.48, 0.4,  0.2);
 }
 
 // ── STARS BACKGROUND ──

@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>B's Space Math Adventure</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Exo+2:wght@400;600;700&display=swap');
@@ -316,6 +318,94 @@
       transition: transform 0.2s;
     }
     .btn-play-again:hover { transform: scale(1.05); }
+
+    /* ── TABLET & TOUCH RESPONSIVE ── */
+
+    /* iPad portrait (768px) and up */
+    @media (min-width: 768px) {
+      .question-card {
+        padding: 44px 52px;
+        max-width: 680px;
+      }
+      .question-text {
+        font-size: clamp(1.3rem, 2.8vw, 1.8rem);
+        margin-bottom: 32px;
+      }
+      .options {
+        max-width: 680px;
+        gap: 16px;
+      }
+      .opt-btn {
+        padding: 22px 20px;
+        font-size: 1.25rem;
+        border-radius: 18px;
+        /* Larger touch targets */
+        min-height: 64px;
+      }
+      .btn-start {
+        font-size: 1.5rem;
+        padding: 22px 60px;
+        min-height: 68px;
+      }
+      .btn-next {
+        font-size: 1.15rem;
+        padding: 18px 50px;
+        min-height: 60px;
+        margin-top: 24px;
+      }
+      .btn-play-again {
+        font-size: 1.15rem;
+        padding: 18px 50px;
+        min-height: 60px;
+      }
+      .hud-item { font-family: 'Orbitron', sans-serif; }
+      .hud-val { font-size: 1.3rem; }
+      #hud { padding: 16px 32px; }
+      .level-badge { font-size: 1rem; padding: 8px 22px; margin-bottom: 24px; }
+      .feedback { padding: 24px 28px; }
+      .feedback-title { font-size: 1.2rem; }
+      .feedback-body { font-size: 1rem; }
+      .final-score { font-size: 5rem; }
+      .stat-box .val { font-size: 2.2rem; }
+      .stat-box .lbl { font-size: 0.9rem; }
+    }
+
+    /* iPad landscape / large tablet */
+    @media (min-width: 1024px) and (max-width: 1200px) {
+      .question-card { max-width: 720px; }
+      .options { max-width: 720px; }
+    }
+
+    /* Touch device enhancements */
+    @media (hover: none) and (pointer: coarse) {
+      /* Bigger tap targets */
+      .opt-btn {
+        padding: 24px 20px;
+        min-height: 70px;
+      }
+      .btn-start, .btn-play-again, .btn-next {
+        min-height: 70px;
+      }
+      /* Remove hover states that don't apply on touch */
+      .opt-btn:hover:not(:disabled) {
+        background: rgba(255,255,255,0.07);
+        border-color: rgba(255,255,255,0.15);
+        transform: none;
+      }
+      /* Active state for touch feedback */
+      .opt-btn:active:not(:disabled) {
+        background: rgba(107,203,255,0.2);
+        border-color: #6bcbff;
+        transform: scale(0.97);
+      }
+      .btn-start:active, .btn-next:active, .btn-play-again:active {
+        transform: scale(0.97);
+      }
+      /* Larger HUD for fingers */
+      #hud { padding: 14px 20px; }
+    }
+
+    /* ── END RESPONSIVE ── */
 
     /* CONFETTI */
     .confetti-piece {

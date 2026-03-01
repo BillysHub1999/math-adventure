@@ -587,12 +587,13 @@ let state = {
 };
 
 const QUESTIONS_TO_LEVEL_UP = 4; // correct answers needed to advance
-const MAX_LEVEL = 8;
-const TOTAL_QUESTIONS = 20;
+const MAX_LEVEL = 12;
+const TOTAL_QUESTIONS = 30;
 
 const LEVEL_NAMES = [
   '', 'Planet Arithmos', 'Asteroid Belt', 'Moon Base Alpha',
-  'Mars Station', 'Jupiter Rings', 'Saturn Nebula', 'Black Hole Edge', 'The Galaxy Core'
+  'Mars Station', 'Jupiter Rings', 'Saturn Nebula', 'Black Hole Edge', 'The Galaxy Core',
+  'Supernova Zone', 'Warp Speed', 'Dark Matter Lab', 'The Singularity'
 ];
 
 // ── QUESTION BANK ──
@@ -606,7 +607,9 @@ function getTypesForLevel(level) {
   if (level <= 2) return ['add', 'subtract', 'multiply', 'pattern'];
   if (level <= 4) return ['add', 'subtract', 'multiply', 'divide', 'pattern', 'geometry'];
   if (level <= 6) return ['multiply', 'divide', 'pattern', 'geometry', 'fractions', 'word'];
-  return ['multiply', 'divide', 'pattern', 'geometry', 'fractions', 'word', 'advanced'];
+  if (level <= 8) return ['multiply', 'divide', 'pattern', 'geometry', 'fractions', 'word', 'advanced'];
+  if (level <= 10) return ['advanced', 'word', 'fractions', 'percentages', 'geometry', 'multistep'];
+  return ['advanced', 'percentages', 'multistep', 'algebra', 'word', 'geometry'];
 }
 
 function r(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -616,40 +619,42 @@ function generateQuestion(type, level) {
   let q = { type, visual: '' };
 
   if (type === 'add') {
-    const max = level <= 2 ? 50 : level <= 4 ? 200 : 999;
-    const a = r(level <= 2 ? 10 : 50, max), b = r(level <= 2 ? 10 : 50, max);
+    const max = level <= 2 ? 99 : level <= 4 ? 500 : 9999;
+    const min = level <= 2 ? 20 : level <= 4 ? 100 : 1000;
+    const a = r(min, max), b = r(min, max);
     q.text = `What is ${a} + ${b}?`;
     q.answer = a + b;
     q.typeLabel = '➕ Addition';
-    q.explanation = `${a} + ${b} = ${a+b}. Try counting up from ${a} by ${b}!`;
-    q.wrongs = [a+b+r(1,9), a+b-r(1,9), a+b+r(10,20)];
+    q.explanation = `${a} + ${b} = ${a+b}.`;
+    q.wrongs = [a+b+r(1,9), a+b-r(1,9), a+b+r(10,50)];
 
   } else if (type === 'subtract') {
-    const max = level <= 2 ? 80 : 300;
-    let a = r(30, max), b = r(10, a - 5);
+    const max = level <= 2 ? 150 : 999;
+    let a = r(60, max), b = r(20, a - 10);
     q.text = `What is ${a} − ${b}?`;
     q.answer = a - b;
     q.typeLabel = '➖ Subtraction';
-    q.explanation = `${a} − ${b} = ${a-b}. You can check by adding: ${a-b} + ${b} = ${a}!`;
-    q.wrongs = [a-b+r(1,9), a-b-r(1,9), a-b+r(10,20)];
+    q.explanation = `${a} − ${b} = ${a-b}. Check: ${a-b} + ${b} = ${a}!`;
+    q.wrongs = [a-b+r(1,9), a-b-r(1,9), a-b+r(10,30)];
 
   } else if (type === 'multiply') {
-    const maxA = level <= 3 ? 9 : level <= 5 ? 12 : 15;
-    const maxB = level <= 3 ? 9 : level <= 5 ? 12 : 15;
-    const a = r(2, maxA), b = r(2, maxB);
+    const maxA = level <= 3 ? 12 : level <= 5 ? 15 : level <= 7 ? 20 : 25;
+    const maxB = level <= 3 ? 12 : level <= 5 ? 15 : level <= 7 ? 20 : 25;
+    const a = r(3, maxA), b = r(3, maxB);
     q.text = `What is ${a} × ${b}?`;
     q.answer = a * b;
     q.typeLabel = '✖️ Multiplication';
-    q.explanation = `${a} × ${b} = ${a*b}. Think of it as ${b} groups of ${a}, or ${a} added together ${b} times!`;
-    q.wrongs = [a*b+r(1,5), a*b-r(1,5), (a+1)*b];
+    q.explanation = `${a} × ${b} = ${a*b}.`;
+    q.wrongs = [a*b+r(2,8), a*b-r(2,8), (a+1)*b];
 
   } else if (type === 'divide') {
-    const a = r(2, level <= 4 ? 9 : 12), b = r(2, level <= 4 ? 9 : 12);
+    const maxA = level <= 4 ? 12 : level <= 6 ? 15 : 20;
+    const a = r(3, maxA), b = r(3, maxA);
     const product = a * b;
     q.text = `What is ${product} ÷ ${a}?`;
     q.answer = b;
     q.typeLabel = '➗ Division';
-    q.explanation = `${product} ÷ ${a} = ${b}. Division is the opposite of multiplication: ${a} × ${b} = ${product}!`;
+    q.explanation = `${product} ÷ ${a} = ${b}. Check: ${a} × ${b} = ${product}!`;
     q.wrongs = [b+1, b+2, b-1 > 0 ? b-1 : b+3];
 
   } else if (type === 'pattern') {
@@ -666,6 +671,12 @@ function generateQuestion(type, level) {
 
   } else if (type === 'advanced') {
     return generateAdvanced(level);
+  } else if (type === 'percentages') {
+    return generatePercentage(level);
+  } else if (type === 'multistep') {
+    return generateMultiStep(level);
+  } else if (type === 'algebra') {
+    return generateAlgebra(level);
   }
 
   // dedupe wrongs and make options
@@ -763,15 +774,66 @@ function generateWord(level) {
 }
 
 function generateAdvanced(level) {
-  // Simple algebra / order of operations
-  const a=r(2,9),b=r(2,9),c=r(1,5);
-  const ans = a*b + c;
+  const problems = [
+    () => { const a=r(4,15),b=r(4,15),c=r(2,10); const ans=a*b+c; return { text:`What is (${a} × ${b}) + ${c}?`, ans, exp:`Multiply first: ${a} × ${b} = ${a*b}, then add ${c} = ${ans}.` }; },
+    () => { const a=r(4,15),b=r(2,8),c=r(2,6); const ans=a*b-c; return { text:`What is (${a} × ${b}) − ${c}?`, ans, exp:`Multiply first: ${a} × ${b} = ${a*b}, then subtract ${c} = ${ans}.` }; },
+    () => { const a=r(3,12),b=r(3,12),c=r(2,9),d=r(2,9); const ans=a*b+c*d; return { text:`What is (${a} × ${b}) + (${c} × ${d})?`, ans, exp:`${a}×${b}=${a*b} and ${c}×${d}=${c*d}. Add them: ${a*b}+${c*d}=${ans}.` }; },
+    () => { const a=r(10,25),b=r(2,6); const sq=b*b; const ans=a+sq; return { text:`What is ${a} + ${b}²?`, ans, exp:`${b}² means ${b} × ${b} = ${sq}. Then ${a} + ${sq} = ${ans}.` }; },
+  ];
+  const p = problems[r(0,problems.length-1)]();
+  const wrongs = [p.ans+r(1,8), p.ans-r(1,7), p.ans+r(9,20)].filter(w=>w!==p.ans&&w>0);
   return {
     type:'advanced', typeLabel:'🧠 Brain Buster',
-    text:`What is (${a} × ${b}) + ${c}?`,
-    visual:'', answer:ans,
-    explanation:`Order of operations: do multiplication first! ${a} × ${b} = ${a*b}, then add ${c}: ${a*b} + ${c} = ${ans}.`,
-    options:shuffle([ans, ans+r(1,5), ans-r(1,4), ans+r(6,10)].filter((v,i,a)=>a.indexOf(v)===i).slice(0,4))
+    text:p.text, visual:'', answer:p.ans, explanation:p.exp,
+    options:shuffle([p.ans,...wrongs.slice(0,3)])
+  };
+}
+
+function generatePercentage(level) {
+  const problems = [
+    () => { const pct=r(1,5)*10, total=r(2,10)*10; const ans=Math.round(pct/100*total); return { text:`What is ${pct}% of ${total}?`, ans, exp:`${pct}% of ${total} = (${pct} ÷ 100) × ${total} = ${ans}.` }; },
+    () => { const part=r(1,9)*5, total=r(2,5)*20; const ans=Math.round(part/total*100); return { text:`${part} out of ${total} is what percent?`, ans, exp:`${part} ÷ ${total} × 100 = ${ans}%.` }; },
+    () => { const orig=r(2,8)*10, pct=r(1,5)*10; const disc=Math.round(orig*pct/100); const ans=orig-disc; return { text:`A space suit costs $${orig}. It's on sale for ${pct}% off. What's the sale price?`, ans, exp:`${pct}% of $${orig} = $${disc} discount. $${orig} − $${disc} = $${ans}.` }; },
+    () => { const orig=r(2,8)*10, pct=r(1,5)*10; const inc=Math.round(orig*pct/100); const ans=orig+inc; return { text:`B earned $${orig} last mission. This mission B earns ${pct}% more. How much is that total?`, ans, exp:`${pct}% of $${orig} = $${inc}. $${orig} + $${inc} = $${ans}.` }; },
+  ];
+  const p = problems[r(0,problems.length-1)]();
+  const wrongs = [p.ans+r(1,10), p.ans-r(1,9), p.ans+r(11,25)].filter(w=>w!==p.ans&&w>0);
+  return {
+    type:'percentages', typeLabel:'💯 Percentages',
+    text:p.text, visual:'', answer:p.ans, explanation:p.exp,
+    options:shuffle([p.ans,...wrongs.slice(0,3)])
+  };
+}
+
+function generateMultiStep(level) {
+  const problems = [
+    () => { const price=r(3,9)*5, qty=r(2,6), paid=Math.ceil(price*qty/10)*10+r(1,3)*10; const cost=price*qty; const ans=paid-cost; return { text:`B buys ${qty} asteroid samples at $${price} each and pays $${paid}. How much change does B get back?`, ans, exp:`${qty} × $${price} = $${cost}. Change = $${paid} − $${cost} = $${ans}.` }; },
+    () => { const speed=r(3,9)*10, time=r(2,5), stop=r(1,5)*10; const ans=speed*time-stop; return { text:`A rocket travels ${speed} km/h for ${time} hours, then reverses ${stop} km. What's the total distance from start?`, ans, exp:`${speed} × ${time} = ${speed*time} km, minus ${stop} km = ${ans} km.` }; },
+    () => { const a=r(2,6), b=r(2,6), c=r(2,6); const tot=a+b+c; const avg=Math.round(tot/3); return { text:`B scored ${a}, ${b}, and ${c} points on 3 missions. What's the average score?`, ans:avg, exp:`Add all scores: ${a}+${b}+${c}=${tot}. Divide by 3: ${tot}÷3=${avg}.` }; },
+    () => { const w=r(2,6), d=r(3,7), bonus=r(1,4)*5; const base=w*d; const ans=base+bonus; return { text:`B works ${d} days a week and earns $${w} per day, plus a $${bonus} weekly bonus. What's B's weekly pay?`, ans, exp:`Daily pay: ${d} × $${w} = $${base}. Plus $${bonus} bonus = $${ans}.` }; },
+  ];
+  const p = problems[r(0,problems.length-1)]();
+  const wrongs = [p.ans+r(1,10), p.ans-r(1,9), p.ans+r(11,25)].filter(w=>w!==p.ans&&w>0);
+  return {
+    type:'multistep', typeLabel:'🔢 Multi-Step',
+    text:p.text, visual:'', answer:p.ans, explanation:p.exp,
+    options:shuffle([p.ans,...wrongs.slice(0,3)])
+  };
+}
+
+function generateAlgebra(level) {
+  const problems = [
+    () => { const b=r(2,12), c=r(1,8); const ans=b+c; return { text:`Solve for x:  x − ${c} = ${b}`, ans, exp:`Add ${c} to both sides: x = ${b} + ${c} = ${ans}.` }; },
+    () => { const b=r(3,12), c=r(2,9); const ans=b*c; return { text:`Solve for x:  x ÷ ${c} = ${b}`, ans, exp:`Multiply both sides by ${c}: x = ${b} × ${c} = ${ans}.` }; },
+    () => { const a=r(2,8), c=r(5,30); const ans=Math.floor(c/a); if(a*ans!==c) return { text:`Solve for x:  ${a}x = ${a*r(2,9)}`, ans:r(2,9), exp:`Divide both sides by ${a}.` }; return { text:`Solve for x:  ${a}x = ${c}`, ans, exp:`Divide both sides by ${a}: x = ${c} ÷ ${a} = ${ans}.` }; },
+    () => { const a=r(2,6), b=r(1,8), c=r(10,40); const ans=Math.round((c-b)/a); if(a*ans+b!==c) return generateAlgebra(level); return { text:`Solve for x:  ${a}x + ${b} = ${c}`, ans, exp:`Subtract ${b}: ${a}x = ${c-b}. Divide by ${a}: x = ${ans}.` }; },
+  ];
+  const p = problems[r(0,problems.length-1)]();
+  const wrongs = [p.ans+r(1,5), p.ans+r(2,6), p.ans-r(1,4)].filter(w=>w!==p.ans&&w>0);
+  return {
+    type:'algebra', typeLabel:'🔭 Algebra',
+    text:p.text, visual:'', answer:p.ans, explanation:p.exp,
+    options:shuffle([p.ans,...wrongs.slice(0,3)])
   };
 }
 

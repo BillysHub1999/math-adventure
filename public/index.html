@@ -499,41 +499,47 @@
 
 <script>
 // ── SOUND EFFECTS ──
+// Uses base64 encoded audio via oscillator + iOS-safe unlock
 let audioCtx = null;
+let audioUnlocked = false;
 
 function getAudioCtx() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
   return audioCtx;
 }
 
-// iOS Safari requires a sound to actually be played (even silent)
-// within the user gesture to fully unlock the audio context
-function unlockAudio() {
+async function unlockAudio() {
   const ctx = getAudioCtx();
-  const buf = ctx.createBuffer(1, 1, 22050);
+  // Resume if suspended (required on iOS)
+  if (ctx.state === 'suspended') {
+    await ctx.resume();
+  }
+  // Play a real but silent buffer — iOS requires actual playback in gesture
+  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
   const src = ctx.createBufferSource();
   src.buffer = buf;
   src.connect(ctx.destination);
   src.start(0);
+  audioUnlocked = true;
 }
 
 function playTone(freq, type, startTime, duration, volume) {
-  const ctx = getAudioCtx();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.type = type;
-  osc.frequency.value = freq;
-  gain.gain.setValueAtTime(volume, ctx.currentTime + startTime);
-  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startTime + duration);
-  osc.start(ctx.currentTime + startTime);
-  osc.stop(ctx.currentTime + startTime + duration + 0.05);
+  if (!audioUnlocked) return;
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime);
+    gain.gain.setValueAtTime(volume, ctx.currentTime + startTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startTime + duration);
+    osc.start(ctx.currentTime + startTime);
+    osc.stop(ctx.currentTime + startTime + duration + 0.05);
+  } catch(e) {}
 }
 
 function playCorrect() {
@@ -554,6 +560,12 @@ function playLevelUp() {
   playTone(784,  'square', 0.36, 0.15, 0.2);
   playTone(1047, 'square', 0.48, 0.4,  0.2);
 }
+
+// Unlock on ANY touch anywhere on page — catches iOS before user even hits Start
+document.addEventListener('touchstart', function onFirstTouch() {
+  unlockAudio();
+  document.removeEventListener('touchstart', onFirstTouch);
+}, { once: true, passive: true });
 
 // ── STARS BACKGROUND ──
 (function() {
@@ -766,9 +778,9 @@ function generateAdvanced(level) {
 // ── GAME LOGIC ──
 let currentQ = null;
 
-function startGame() {
-  // Unlock audio on iOS — must play actual (silent) sound within tap gesture
-  unlockAudio();
+async function startGame() {
+  // Belt AND suspenders — unlock again on Start tap in case touchstart fired too early
+  await unlockAudio();
   state = { level:1, score:0, streak:0, correctInRow:0, totalAnswered:0, totalCorrect:0, questionsThisLevel:0, answered:false };
   showScreen('game-screen');
   document.getElementById('hud').classList.add('visible');
